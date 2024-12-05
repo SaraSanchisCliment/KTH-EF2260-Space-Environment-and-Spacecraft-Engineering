@@ -7,7 +7,7 @@ from scipy.ndimage import median_filter, uniform_filter
 import matplotlib.colors as colors
 import gc
 
-def seu_image_processing(images, image_index, window_size=3, filter_size=3, new_min=-1, new_max=1):
+def seu_image_processing(images, image_index, window_size=3, filter_size=3, new_min=-1, new_max=1, shooting_star_threshold=10):
     """
     Comprehensive image processing function with multiple operations.
     Args:
@@ -16,6 +16,7 @@ def seu_image_processing(images, image_index, window_size=3, filter_size=3, new_
         filter_size (int): Size of median filter
         new_min (float): Minimum value for scaling
         new_max (float): Maximum value for scaling
+        shooting_star_threshold (int): Threshold for size of regions classified as shooting stars
     Returns:
         numpy.ndarray: Processed and scaled image array
     """
@@ -143,6 +144,21 @@ def seu_image_processing(images, image_index, window_size=3, filter_size=3, new_
         # If 1s are more than 0s, invert the image
         if num_ones > (image.size / 2):
             binary_images[i] = 1 - image  # Invert the image (1 -> 0, 0 -> 1)
+
+    # Detect and remove shooting stars
+    def remove_shooting_stars(binary_image, pixel_threshold=shooting_star_threshold):
+        """
+        Remove shooting stars from a binary image by excluding connected regions larger than a threshold.
+        """
+        labeled_image, num_features = label(binary_image)
+        filtered_image = np.zeros_like(binary_image)
+        for region_idx in range(1, num_features + 1):
+            region = (labeled_image == region_idx)
+            if np.sum(region) < pixel_threshold:
+                filtered_image[region] = 1
+        return filtered_image
+
+    binary_images = np.array([remove_shooting_stars(img) for img in binary_images])
 
     return binary_images
 
